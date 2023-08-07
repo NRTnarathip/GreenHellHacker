@@ -10,8 +10,8 @@
 #include <tchar.h>
 #include <tlhelp32.h>
 #include <codecvt>
+#include "MemRead.hpp"
 
-#define UIntPtr uintptr_t;
 
 void hex(uintptr_t n) {
 	printf("%X\n", n);
@@ -41,13 +41,14 @@ int main()
 {
 	auto gameName = (LPCWSTR)L"GH.exe";
 	const wchar_t* monoDllName = L"mono-2.0-bdwgc.dll";
-	uintptr_t procID = GetProcessIdByName(gameName);
+	DWORD procID = GetProcessIdByName(gameName);
 	HANDLE procHandle = OpenProcess(
 		PROCESS_QUERY_INFORMATION
 		| PROCESS_VM_READ
 		| PROCESS_VM_OPERATION
 		| PROCESS_VM_WRITE,
 		FALSE, procID);
+	Mem::initProcess(procHandle);
 
 	HMODULE handleModules[1024];
 	DWORD cbNeeded;
@@ -58,7 +59,7 @@ int main()
 	if (cbNeeded / sizeof(HMODULE) > 0) {
 		baseAddress = (uintptr_t)handleModules[0];
 	}
-	HANDLE monoHandle = 0;
+	HMODULE monoModule = 0;
 	uintptr_t monoBaseAddress = 0;
 	MODULEINFO* monoModuleInfo;
 
@@ -68,25 +69,44 @@ int main()
 		wchar_t szModName[MAX_PATH];
 		auto moduleHandle = handleModules[i];
 		GetModuleInformation(procHandle, moduleHandle,
-			&moduleInfoBuffer, 
+			&moduleInfoBuffer,
 			sizeof(MODULEINFO));
 
-		auto moduleName = GetModuleBaseNameW(procHandle, moduleHandle, 
+		auto moduleName = GetModuleBaseNameW(procHandle, moduleHandle,
 			szModName, sizeof(szModName) / sizeof(wchar_t));
 
 		//std::wcout << szModName << " < this mod name\n";
 
 		if (std::wstring(szModName).compare(monoDllName) == 0) {
-			monoHandle = moduleHandle;
+			monoModule = moduleHandle;
 			monoModuleInfo = &moduleInfoBuffer;
 			monoBaseAddress = reinterpret_cast<uintptr_t>(moduleInfoBuffer.lpBaseOfDll);
 		}
 	}
 
-	std::cout << "Base Address: 0x" << std::hex << baseAddress << std::endl;
-	std::wcout << "mono-2.0-bwgc.dll base address 0x" << std::hex << monoBaseAddress << '\n';
 
+	typedef void* (*MonoGetRootDomainFunct)();
 
+	std::cout << "Base Address: " << std::hex << baseAddress << std::endl;
+
+	std::wcout << "mono-2.0-bwgc.dll base address " << std::hex << monoBaseAddress << '\n';
+
+	// decode date time  23:13 7/8/2556
+	// in Cheat Engine
+	//mono-2.0-bdwgc.dll + A4C30 || 48 8B 05 A9A77100 || mov rax, [mono - 2.0 - bdwgc.dll + 7BF3E0] { (220AA112D20) }
+	Mem::initProcess(procHandle);
+	auto rootDomainAddr = Mem::readIntPtr(monoBaseAddress + 0x7BF3E0);
+	std::wcout << "mono root domain: " << std::hex << rootDomainAddr << '\n';
+
+	auto playerAddr = Mem::readIntPtr(rootDomainAddr + 0x5FD0);
+	auto playerSpeedAddr = playerAddr + 0x484;
+	std::wcout << "player address: " << std::hex << playerAddr << '\n';
+
+	while (true) {
+		Sleep(100);
+		auto currentSpeed = Mem::readFloat(playerSpeedAddr);
+		std::wcout << "read speed " << currentSpeed << "\n";
+	}
 	CloseHandle(procHandle);
 	return 0;
 }

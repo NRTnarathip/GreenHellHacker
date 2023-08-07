@@ -30,6 +30,7 @@ public static class Program
         {
             mapFuncs[func.Name] = func;
             mapFuncAddress[func.Name] = monoModule.BaseAddress + (IntPtr)func.Address;
+            Console.WriteLine($"Name:{func.Name} offs: {func.Address:x}");
         }
         //var kernalModule = game.getModule("KERNEL32.DLL");
         //byte[] kernalModuleBuffer = new byte[kernalModule.ModuleMemorySize];
