@@ -2,7 +2,6 @@
 using Veldrid;
 using Veldrid.Sdl2;
 using Veldrid.StartupUtilities;
-
 public class GreenHellHack
 {
     ImGuiRenderer imguiRenderer;
@@ -16,13 +15,15 @@ public class GreenHellHack
     const int deltaMillisecond = (int)(deltaFrameTarget * 1000);
 
 
+    public const string GameProcessName = "GH";
     ProcessHack gameHack;
     // find base player with nearest signature and offset -7C
     // player = nearest_sig + (-7C)
+    public const string MonoDllFileName = "mono-2.0-bdwgc.dll";
     const string signature = "33 33 B3 3E ?? 00 00 00 00 00 00 00 00 00 00 00 FF FF 7F FF";
     string[] signatureAOBs = signature.Split(' ');
     IntPtr m_playerPtr = IntPtr.Zero;
-    IntPtr m_rootMonoPtr = IntPtr.Zero;
+    IntPtr m_rootDomainPtr = IntPtr.Zero;
     const IntPtr signatureOffsetToPlayer = -0x7C;
     const IntPtr m_speedMulOffset = 0x484;
     float m_speedMul = 1f;
@@ -31,7 +32,7 @@ public class GreenHellHack
     bool m_activeGUI = true;
     public void LaunchApp()
     {
-        gameHack = new ProcessHack("GH");
+        gameHack = new ProcessHack(GameProcessName);
         if (!gameHack.Setup() && m_activeRunGameHack)
         {
             return;
@@ -70,17 +71,18 @@ public class GreenHellHack
 
     void init()
     {
-        //m_activeGUI = false;
-        //m_activeRunGameHack = false;
+        m_activeGUI = false;
+        m_activeRunGameHack = false;
 
-        var mono2bdwgcDLL = gameHack.getModule("mono-2.0-bdwgc.dll");
+        var mono2bdwgcDLL = gameHack.getModule(MonoDllFileName);
         if (mono2bdwgcDLL == null) return;
 
-        m_rootMonoPtr = Memory.readIntPtr(gameHack.proc,
+        m_rootDomainPtr = Memory.readIntPtr(gameHack.proc,
             mono2bdwgcDLL.BaseAddress + 0x7BF358);
-        Console.WriteLine(m_rootMonoPtr.hex());
-        m_playerPtr = Memory.readPointerOffset(gameHack.proc,
-            m_rootMonoPtr, new IntPtr[] { 0x5FD0 });
+        Console.WriteLine($"Root Domain Ptr: {m_rootDomainPtr:x}");
+        //Console.WriteLine("Root Domain Result Call func ptr: " + (Marshal.Get).hex());
+        m_playerPtr = Memory.readIntPtr(gameHack.proc,
+            m_rootDomainPtr + 0x5FD0);
     }
     void beforeUpdate()
     {
@@ -111,11 +113,9 @@ public class GreenHellHack
         //scan base player 
         if (m_playerPtr == IntPtr.Zero)
         {
-            Console.WriteLine($"Player Pointer Is Valid {m_playerPtr:X}");
+            //Console.WriteLine($"Player Pointer Is Valid {m_playerPtr:X}");
             return;
         }
-        Console.WriteLine(m_playerPtr);
-        Console.WriteLine(m_playerPtr + m_speedMulOffset);
         gameHack.writeFloat(m_playerPtr + m_speedMulOffset, m_speedMul);
     }
     void render()

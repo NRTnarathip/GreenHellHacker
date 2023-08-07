@@ -12,15 +12,15 @@ public static partial class Memory
     }
     public static Int32 readInt32(IntPtr m_handle, IntPtr dwAddress)
     {
-        byte[] buffer = new byte[sizeof(Int32)];
-        Kernal.ReadProcessMemory(m_handle, dwAddress, buffer, buffer.Length, out _);
-        return BitConverter.ToInt32(buffer, 0);
+        byte[] buffer = new byte[4];
+        Kernal.ReadProcessMemory(m_handle, dwAddress, buffer, 4, out _);
+        return BitConverter.ToInt32(buffer);
     }
     public static Int64 readInt64(IntPtr m_handle, IntPtr dwAddress)
     {
-        byte[] buffer = new byte[sizeof(Int64)];
-        Kernal.ReadProcessMemory(m_handle, dwAddress, buffer, sizeof(Int64), out _);
-        return BitConverter.ToInt64(buffer, 0);
+        byte[] buffer = new byte[8];
+        Kernal.ReadProcessMemory(m_handle, dwAddress, buffer, 8, out _);
+        return BitConverter.ToInt64(buffer);
     }
     public static IntPtr readIntPtr(Process proc, IntPtr address)
     {

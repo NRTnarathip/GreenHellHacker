@@ -103,5 +103,8 @@ public sealed class ProcessHack
         }
         return foundAddresses.ToArray();
     }
-
+    public void readBuffer(IntPtr addr, byte[] buffer)
+    {
+        Kernal.ReadProcessMemory(proc.Handle, addr, buffer, buffer.Length, out _);
+    }
 }

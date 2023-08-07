@@ -1,17 +1,20 @@
 ﻿using System.Diagnostics;
 public static partial class Memory
 {
-    public static string[] DumpBuffer(IntPtr baseAddr, byte[] buffer, int colume)
+    public static string[] DumpBuffer(IntPtr startAddr, byte[] buffer, int colume, int maxRow)
     {
         List<string> lines = new();
         var index = 0;
         var bufferLength = buffer.Length;
         int row = (int)Math.Ceiling(bufferLength / (float)colume);
+        if (maxRow > 0)
+            if (row > maxRow) row = maxRow;
+
         for (int y = 0; y < row; y++)
         {
-            var addr = baseAddr + index;
+            var addr = startAddr + index;
             var line = "";
-            line += $"address: {addr.hex()} | ";
+            line += $"address: {addr:x} | ";
 
             for (int x = 0; x < colume; x++)
             {
@@ -21,8 +24,7 @@ public static partial class Memory
                     b = buffer[index];
                 }
 
-                var hex = b.hex();
-                line += hex + " ";
+                line += $"{b:X} ";
 
                 //end 
                 index++;
@@ -31,16 +33,16 @@ public static partial class Memory
         }
         return lines.ToArray();
     }
-    public static void PrintDumpBuffer(IntPtr baseAddr, byte[] buffer, int colume)
+    public static void PrintDumpBuffer(IntPtr baseAddr, byte[] buffer, int colume, int maxRow = -1)
     {
-        var lines = DumpBuffer(baseAddr, buffer, colume);
+        var lines = DumpBuffer(baseAddr, buffer, colume, maxRow);
         foreach (var line in lines)
             Console.WriteLine(line);
     }
     public static void print(string s) => Console.WriteLine(s);
     public static IntPtr[] AOBScan(Process proc, IntPtr startAddr, IntPtr endAddr, string[] signatureString)
     {
-        Console.WriteLine($"app base addr {proc.MainModule.BaseAddress.hex()}");
+        Console.WriteLine($"app base addr {proc.MainModule.BaseAddress:X}");
         var foundAddresses = new List<IntPtr>();
         var signatureNumer = new int[signatureString.Length];
         for (int i = 0; i < signatureString.Length; i++)
@@ -70,7 +72,7 @@ public static partial class Memory
                 var sigInt = signatureNumer[sigIndex];
                 if (currentAddress % 0xfffff == 0)
                 {
-                    print($"current addr {currentAddress.hex()}");
+                    print($"current addr {currentAddress:X}");
                 }
                 //found byte
                 if (sigInt == -1 || sigInt == b)
